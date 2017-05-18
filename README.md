@@ -13,6 +13,9 @@ ftp://ftp.nhtsa.dot.gov/fars/2013/National/FARS2013NationalDBF.zip
 ftp://ftp.nhtsa.dot.gov/fars/2014/National/FARS2014NationalDBF.zip  
 ftp://ftp.nhtsa.dot.gov/fars/2015/National/FARS2015NationalCSV.zip
 
+The link to the full description of FARS  
+https://crashstats.nhtsa.dot.gov/Api/Public/Publication/812315  
+
 **Step 3. Unzip them in the target file folder.**  
 
 **Step 4. Use RStudio (recommended) knit html on EDA_1.rmd to create report. Make sure the following R libraries are installed:**  
@@ -24,7 +27,7 @@ library(leaflet)   # for interactive maps
 library(plotly)    # for pie chart  
 library(foreign)   # to load .dbf file  
 
-**Step 5. The user could generate the report for any US state (50 states + Washington D.C.) he/she likes, by changing state_abbr in the .rmd file**
+**Step 5. The user could generate the report for any US state (50 states + Washington D.C.) he/she likes, by changing the "state_abbr" variable in the .rmd file**
 ```{r}
 # Choose a state to analyze (Use Capitalized caracters!)
 state_abbr <- "UT"
