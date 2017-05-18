@@ -15,7 +15,7 @@ ftp://ftp.nhtsa.dot.gov/fars/2015/National/FARS2015NationalCSV.zip
 
 **Step 3. Unzip them in the target file folder.**  
 
-**Step 4. Use RStudio (recommended) knit html to create report. Make sure the following R libraries are installed:**  
+**Step 4. Use RStudio (recommended) knit html on EDA_1.rmd to create report. Make sure the following R libraries are installed:**  
 
 library(png)       # show images on rmd  
 library(grid)      # show images on rmd  
