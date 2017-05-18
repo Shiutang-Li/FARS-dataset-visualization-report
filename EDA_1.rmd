@@ -1,0 +1,955 @@
+US 2013-2015 Fatality Analysis Reporting System (FARS) exploratory data analysis
+========================================================
+##### by Shiu-Tang Li
+###1. Brief introduction, and some remarks to this interactive EDA
+In this report, A few interactive maps / pie charts are created to help the readers gain intuition on FARS dataset, including the visualizations of a few major factors (drunken driving, non-motor vehicle occupant deaths, weather, number of persons died in an accident).
+
+**The data set**
+
+FARS 2013-2015 dataset contains 50-52 features (differed by years), and contains 92,424 observations (30202, 30056, 32166 obs for year 2013, 2014, 2015).
+
+The FARS data set can be downloaded from ftp://ftp.nhtsa.dot.gov/fars/, and the full description of the FARS dataset can be downloaded from 
+https://crashstats.nhtsa.dot.gov/Api/Public/Publication/812315 .
+
+In this report, all data with wrong longitude or latitude (say latitude = 999.99) are removed (722 obs). 
+
+**Additional Information as you hover the cursor over the map..**
+
+Format: Month/Day/Year(Weekday), 24 hour time format, number of persons killed, first harmful event (major reason that causes death) 
+
+**Create a customized EDA report!**
+
+You could create an analysis report for any state you like, by specifying the state abbreviations (All 50 states + Washington D.C., not including Virgin Islands and Puerto Rico because there're no data) in the .rmd file. The default is "UT" (Utah).  
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+# Choose a state to analyze (Use Capitalized caracters!)
+state_abbr <- "UT"
+
+# Virgin Islands contains 0 obs in year 2013-2015
+# Puerto Rico contains 0 obs in year 2013-2015
+```
+
+```{r packages}
+#### load all libraries, functions, and data
+library(png)       # show images on rmd
+library(grid)      # show images on rmd
+library(dplyr)
+library(leaflet)   # for interactive maps
+library(plotly)    # for pie chart
+library(foreign)   # to load .dbf file
+
+# Some settings to get interactive map working in .html 
+addTiles = function(map, 
+                    urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    attribution = NULL, 
+                    layerId = NULL, 
+                    group = NULL, 
+                    options = tileOptions()){
+options$attribution = attribution
+if (missing(urlTemplate) && is.null(options$attribution))
+options$attribution = paste("OpenStreetMap",
+"contributors, CC-BY-SA")
+invokeMethod(map, getMapData(map), "addTiles", urlTemplate,
+layerId, group, options)
+}
+
+
+# load functions / decoders
+zero_or_not <- function(value){
+  if (value == 0) {
+    return("No")
+  }
+  else{
+    return("Yes")
+  }
+}
+
+missing_values_replacement <- function(value){
+  if (value == '99') {
+    return("--")
+  }
+  else{
+    return(value)
+  }
+}
+
+weather_decoding <- function(value){
+  if (value == 1) {
+    return("Clear")
+  }
+  else if (value == 0){
+    return("No Additional Atmospheric Conditions")
+  }
+  else if (value == 2){
+    return("Rain")
+  }
+  else if (value == 3){
+    return("Sleet, Hail")
+  }
+  else if (value == 4){
+    return("Snow")
+  }
+  else if (value == 5){
+    return("Fog, Smog, Smoke")
+  }
+  else if (value == 6){
+    return("Severe Crosswinds")
+  }
+  else if (value == 7){
+    return("Blowing Sand, Soil, Dirt")
+  }
+  else if (value == 8){
+    return("Other")
+  }
+  else if (value == 10){
+    return("Cloudy")
+  }
+  else if (value == 11){
+    return("Blowing Snow")
+  }
+  else if (value == 12){
+    return("Freezing Rain or Drizzle")
+  }
+  else{
+    return("Unknown")
+  }
+}
+
+weekday_decoding <- function(value){
+  if (value == 1) {
+    return("(Sun)")
+  }
+  else if (value == 2){
+    return("(Mon)")
+  }
+  else if (value == 3){
+    return("(Tue)")
+  }
+  else if (value == 4){
+    return("(Wed)")
+  }
+  else if (value == 5){
+    return("(Thu)")
+  }
+  else if (value == 6){
+    return("(Fri)")
+  }
+  else if (value == 7){
+    return("(Sat)")
+  }
+  else{
+    return("--")
+  }
+}
+
+first_harmful_event_decoding <- function(value){
+  if (value == 1) {
+    return("Rollover/Overturn")
+  }
+  else if (value == 2){
+    return("Fire/Explosion")
+  }
+  else if (value == 3){
+    return("Immersion")
+  }
+  else if (value == 4){
+    return("Gas Inhalation")
+  }
+  else if (value == 5){
+    return("Fell/Jumped from Vehicle")
+  }
+  else if (value == 6){
+    return("Injured in Vehicle (Non-Collision)")
+  }
+  else if (value == 7){
+    return("Other Non-Collision")
+  }
+  else if (value == 8){
+    return("Pedestrian")
+  }
+  else if (value == 9){
+    return("Pedalcyclist")
+  }
+  else if (value == 10){
+    return("Railway Vehicle")
+  }
+  else if (value == 11){
+    return("Live Animal")
+  }
+  else if (value == 12){
+    return("Motor Vehicle in Transport")
+  }
+  else if (value == 14){
+    return("Parked Motor Vehicle (Not In Transport)")
+  }
+  else if (value == 15){
+    return("Non-Motorist on Personal Conveyance")
+  }
+  else if (value == 16){
+    return("Thrown or Falling Object")
+  }
+  else if (value == 17){
+    return("Boulder")
+  }
+  else if (value == 18){
+    return("Other Object (Not Fixed)")
+  }
+  else if (value == 19){
+    return("Building")
+  }
+  else if (value == 20){
+    return("Impact attenuator")
+  }
+  else if (value == 21){
+    return("Bridge Pier or Support")
+  }
+  else if (value == 23){
+    return("Bridge Rail (Includes Parapet)")
+  }
+  else if (value == 24){
+    return("Guardrail Face")
+  }
+  else if (value == 25){
+    return("Concrete Traffic Barrier")
+  }
+  else if (value == 26){
+    return("Other Traffic Barrier")
+  }
+  else if (value == 30){
+    return("Utility Pole/Light Support")
+  }
+  else if (value == 31) {
+    return("Other Post/Pole/Support")
+  }
+  else if (value == 32){
+    return("Culvert")
+  }
+  else if (value == 33){
+    return("Curb")
+  }
+  else if (value == 34){
+    return("Ditch")
+  }
+  else if (value == 35){
+    return("Embankment")
+  }
+  else if (value == 38){
+    return("Fence")
+  }
+  else if (value == 39){
+    return("Wall")
+  }
+  else if (value == 40){
+    return("Fire Hydrant")
+  }
+  else if (value == 41){
+    return("Shrubbery")
+  }
+  else if (value == 42){
+    return("Tree (Standing Only)")
+  }
+  else if (value == 43){
+    return("Other Fixed Object")
+  }
+  else if (value == 44){
+    return("Pavement Surface Irregularity")
+  }
+  else if (value == 45){
+    return("Working Motor Vehicle")
+  }
+  else if (value == 46){
+    return("Traffic Signal Support")
+  }
+  else if (value == 48){
+    return("Snow Bank")
+  }
+  else if (value == 49){
+    return("Ridden Animal or Animal-Drawn Conveyance")
+  }
+  else if (value == 50){
+    return("Bridge Overhead Structure")
+  }
+  else if (value == 51){
+    return("Jackknife")
+  }
+  else if (value == 52){
+    return("Guardrail end")
+  }
+  else if (value == 53){
+    return("Mail Box")
+  }
+  else if (value == 54){
+    return("Motor Vehicle In-Transport Collisions")
+  }
+  else if (value == 55){
+    return("Motor Vehicle in Motion Outside the Trafficway")
+  }
+  else if (value == 57){
+    return("Cable Barrier")
+  }
+  else if (value == 58){
+    return("Ground")
+  }
+  else if (value == 59){
+    return("Traffic Sign Support")
+  }
+  else if (value == 72){
+    return("Cargo/Equipment Loss or Shift")
+  }
+  else if (value == 73){
+    return("Object Fell From Motor Vehicle In-Transport ")
+  }
+  else{
+    return("Unknown")
+  }
+}
+
+## State switch
+switch(state_abbr, 
+UT={
+state_number<- 49 
+state_name  <- "Utah"
+},
+AL={
+state_number<- 1 
+state_name  <- "Alabama"   
+},
+AK={
+state_number<- 2 
+state_name  <- "Alaska"   
+},
+AZ={
+state_number<- 4 
+state_name  <- "Arizona"
+},
+AR={
+state_number<- 5 
+state_name  <- "Arkansas"   
+},
+CA={
+state_number<- 6 
+state_name  <- "California"   
+},
+CO={
+state_number<- 8 
+state_name  <- "Colorado"
+},
+CT={
+state_number<- 9 
+state_name  <- "Connecticut"   
+},
+DE={
+state_number<- 10 
+state_name  <- "Delaware"   
+},
+DC={
+state_number<- 11 
+state_name  <- "District of Columbia"
+},
+FL={
+state_number<- 12
+state_name  <- "Florida"   
+},
+GA={
+state_number<- 13 
+state_name  <- "Georgia"   
+},
+HI={
+state_number<- 15 
+state_name  <- "Hawaii"
+},
+ID={
+state_number<- 16 
+state_name  <- "Idaho"   
+},
+IL={
+state_number<- 17 
+state_name  <- "Illinois"   
+},
+IN={
+state_number<- 18
+state_name  <- "Indiana"
+},
+IA={
+state_number<- 19
+state_name  <- "Iowa"   
+},
+KS={
+state_number<- 20
+state_name  <- "Kansas"   
+},
+KY={
+state_number<- 21
+state_name  <- "Kentucky"
+},
+LA={
+state_number<- 22 
+state_name  <- "Louisiana"   
+},
+ME={
+state_number<- 23 
+state_name  <- "Maine"   
+},
+MD={
+state_number<- 24
+state_name  <- "Maryland"
+},
+MA={
+state_number<- 25
+state_name  <- "Massachusetts"   
+},
+MI={
+state_number<- 26 
+state_name  <- "Michigan"   
+},
+MN={
+state_number<- 27
+state_name  <- "Minnesota"
+},
+MS={
+state_number<- 28
+state_name  <- "Mississippi"   
+},
+MO={
+state_number<- 29
+state_name  <- "Missouri"   
+},
+MT={
+state_number<- 30 
+state_name  <- "Montana"
+},
+NE={
+state_number<- 31
+state_name  <- "Nebraska"   
+},
+NV={
+state_number<- 32
+state_name  <- "Nevada"   
+},
+NH={
+state_number<- 33 
+state_name  <- "New Hampshire"
+},
+NJ={
+state_number<- 34 
+state_name  <- "New Jersey"   
+},
+NM={
+state_number<- 35 
+state_name  <- "New Mexico"   
+},
+NY={
+state_number<- 36
+state_name  <- "New York"
+},
+NC={
+state_number<- 37
+state_name  <- "North Carolina"   
+},
+ND={
+state_number<- 38
+state_name  <- "North Dakota"   
+},
+OH={
+state_number<- 39 
+state_name  <- "Ohio"
+},
+OK={
+state_number<- 40 
+state_name  <- "Oklahoma"   
+},
+OR={
+state_number<- 41 
+state_name  <- "Oregon"   
+},
+PA={
+state_number<- 42
+state_name  <- "Pennsylvania"
+},
+#PR={   # no data in 2013-2015
+#state_number<- 43
+#state_name  <- "Puerto Rico"   
+#},
+RI={
+state_number<- 44
+state_name  <- "Rhode Island"   
+},
+SC={
+state_number<- 45
+state_name  <- "South Carolina"
+},
+SD={
+state_number<- 46 
+state_name  <- "South Dakota"   
+},
+TN={
+state_number<- 47 
+state_name  <- "Tennessee"   
+},
+TX={
+state_number<- 48
+state_name  <- "Texas"
+},
+VT={
+state_number<- 50
+state_name  <- "Vermont"   
+},
+#VI={       # no data in 2013-2015
+#state_number<- 52 
+#state_name  <- "Virgin Islands"   
+#},
+VA={
+state_number<- 51
+state_name  <- "Virginia"
+},
+WA={
+state_number<- 53
+state_name  <- "Washington"
+},
+WV={
+state_number<- 54
+state_name  <- "West Virginia"   
+},
+WI={
+state_number<- 55
+state_name  <- "Wisconsin"   
+},
+WY={
+state_number<- 56
+state_name  <- "Wyoming"
+}
+)
+
+## load data / combine data / preprocessing
+
+df <- read.csv("FARS2015NationalCSV/accident.csv")
+df <- df[,c("STATE", "PEDS", "DAY", "MONTH",
+            "YEAR", "DAY_WEEK", "HOUR", "MINUTE",
+            "LATITUDE", "LONGITUD", "HARM_EV",
+            "WEATHER", "FATALS", "DRUNK_DR")]
+df <- df[(df$LATITUDE <= 90) &
+         (df$LONGITUD <= 180), ]
+
+df_2014 <- read.dbf("FARS2014NationalDBF/accident.dbf")
+df_2014 <- df_2014[,c("STATE", 
+            "PEDS", "DAY","MONTH",
+            "YEAR", "DAY_WEEK", "HOUR", "MINUTE",
+            "LATITUDE", "LONGITUD", "HARM_EV",
+            "WEATHER", "FATALS", "DRUNK_DR")]
+df_2014 <- df_2014[(df_2014$LATITUDE <= 90) &
+                   (df_2014$LONGITUD <= 180), ]
+
+df_2013 <- read.dbf("FARS2013NationalDBF/accident.dbf")
+df_2013 <- df_2013[,c("STATE", 
+            "PEDS", "DAY","MONTH",
+            "YEAR", "DAY_WEEK", "HOUR", "MINUTE",
+            "LATITUDE", "LONGITUD", "HARM_EV",
+            "WEATHER", "FATALS", "DRUNK_DR")]
+df_2013 <- df_2013[(df_2013$LATITUDE <= 90) &
+                   (df_2013$LONGITUD <= 180), ]
+
+
+df <- rbind(df, df_2014)
+df <- rbind(df, df_2013)
+
+df_state <- df[df$STATE == state_number, ]  
+
+Hour  <- sapply(df_state$HOUR, toString)
+Hour  <- sapply(Hour, missing_values_replacement)
+Min   <- sapply(df_state$MINUTE + 100, toString)
+Min   <- sapply(Min, substr, 2, 3)
+Min   <- sapply(Min, missing_values_replacement)
+Weekday <- sapply(df_state$DAY_WEEK, weekday_decoding)
+Month <- sapply(df_state$MONTH, toString)
+Day   <- sapply(df_state$DAY, toString)
+Year  <- sapply(df_state$YEAR - 2000, toString)
+
+#Weather<- sapply(df_state$WEATHER, weather_decoding)
+
+Acc_Time  <- paste(Month, Day, sep="/")
+Acc_Time  <- paste(Acc_Time, Year, sep="/")
+Acc_Time  <- paste(Acc_Time, Weekday, sep="")
+Acc_Time  <- paste(Acc_Time, Hour, sep=", ")
+Acc_Time  <- paste(Acc_Time, Min, sep=":")
+df_state$info <- Acc_Time
+
+number_killed <- sapply(df_state$FATALS, toString)
+df_state$info <- paste(df_state$info, 
+                       number_killed, sep =", ")
+df_state$info <- paste(df_state$info, 
+                       "killed. ", sep =" ")
+first_harmful_event <- sapply(df_state$HARM_EV,
+                              first_harmful_event_decoding)
+
+df_state$info <- paste(df_state$info, 
+                       first_harmful_event, ".",
+                       sep ="")
+
+# rm(list=ls())
+```
+
+```{r fig.width=5, fig.height=1}
+img <- readPNG("set_state.png")
+grid.raster(img)
+``` 
+
+###2. Drunken driving
+
+```{r}
+df2 <- data.frame(df_state$LATITUDE, 
+                  df_state$LONGITUD, 
+                  df_state$info, 
+                  df_state$DRUNK_DR)
+colnames(df2) <- c("lat", "long", "info", "drunk")
+df2$drunk <- sapply(df2$drunk, zero_or_not)
+
+df3 <- data.frame(df$DRUNK_DR)
+colnames(df3) <- c("drunk")
+df3$drunk <- sapply(df3$drunk, zero_or_not)
+
+p1<- plot_ly(data = count(df2, drunk), 
+             type = 'pie',
+             textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             labels = ~drunk, 
+             values = ~n,
+             hoverinfo = "text",
+             text = ~n,
+             domain = list(x = c(0, 0.47), 
+                           y = c(0, 0.94)),
+             marker = list(line = 
+                           list(color = '#FFFFFF', 
+                                width = 1))) 
+
+p2<- plot_ly(data = count(df3, drunk), 
+             type = 'pie',
+             textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             labels = ~drunk, 
+             values = ~n,
+             hoverinfo = "text",
+             text = ~n, 
+             domain = list(x = c(0.53, 1), 
+                           y = c(0, 0.94)),
+             marker = list(line = 
+                           list(color = '#FFFFFF', 
+                                width = 1))) 
+
+title_string <- paste("Drunken Driving in 2013-2015 traffic fatalities: ", state_name, " vs Nation", sep="")
+
+subplot(p1, p2, nrows = 1) %>% 
+layout(title = title_string, 
+       showlegend = F,
+       margin = list(l = 50,r = 50,b = 10,t = 80,
+                     pad = 4),
+       xaxis = list(showgrid = FALSE, 
+                    zeroline = FALSE, 
+                    showticklabels = FALSE),
+       yaxis = list(showgrid = FALSE, 
+                    zeroline = FALSE, 
+                    showticklabels = FALSE),
+       annotations = list(list(x = 0.22, 
+                               y = 0.95, 
+                               text = state_abbr, 
+                               showarrow = F,
+                               xref='paper', 
+                               yref='paper'),
+                          list(x = 0.81, 
+                               y = 0.95, 
+                               text = "Nation", 
+                               showarrow = F,
+                               xref='paper', 
+                               yref='paper')))
+```  
+
+**2013-2015 `r state_name` traffic fatalities by drunken driving**
+```{r}
+palette <- colorFactor(c("black", "red"), domain = c("No", "Yes"))
+
+leaflet(data = df2) %>% 
+addTiles() %>% 
+addCircleMarkers(~long, ~lat
+                ,label  = ~as.character(info)
+                ,color  = ~palette(drunk)
+                ,radius = 6
+                ,stroke = FALSE
+                ,fillOpacity = 0.7 
+                )%>% 
+addLegend("bottomright", 
+          pal = palette,
+          values = ~drunk,
+          title  = "Drunken driving",
+          opacity = 1
+          )
+```
+
+###3. Non-Motor Vehicle Occupant killed in an accident
+
+Non-motor vehicle occupants refer to people NOT in motor vehicles, e.g. pedestrians, cyclists.
+
+```{r}
+df2 <- data.frame(df_state$LATITUDE, 
+                  df_state$LONGITUD, 
+                  df_state$info, 
+                  df_state$PEDS)
+colnames(df2) <- c("lat", "long", "info", "peds")
+df2$peds <- sapply(df2$peds, zero_or_not)
+
+df3 <- data.frame(df$PEDS)
+colnames(df3) <- c("peds")
+df3$peds <- sapply(df3$peds, zero_or_not)
+
+p1<- plot_ly(data = count(df2, peds), 
+             type = 'pie',
+             textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             labels = ~peds, 
+             values = ~n,
+             hoverinfo = "text",
+             text = ~n,
+             domain = list(x = c(0, 0.47), 
+                           y = c(0, 0.94)),
+             marker = list(line = 
+                           list(color = '#FFFFFF', 
+                                width = 1))) 
+
+p2<- plot_ly(data = count(df3, peds), 
+             type = 'pie',
+             textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             labels = ~peds, 
+             values = ~n,
+             hoverinfo = "text",
+             text = ~n, 
+             domain = list(x = c(0.53, 1), 
+                           y = c(0, 0.94)),
+             marker = list(line = 
+                           list(color = '#FFFFFF', 
+                                width = 1))) 
+title_string <- paste("Are Non-Motor Vehicle Occupants killed in 2013-2015 traffic fatalities?<br>", state_name, " vs Nation", sep="")
+
+subplot(p1, p2, nrows = 1) %>% 
+layout(title = title_string, 
+       showlegend = F,
+       margin = list(l = 50,r = 50,b = 10,t = 80,
+                     pad = 4),
+       xaxis = list(showgrid = FALSE, 
+                    zeroline = FALSE, 
+                    showticklabels = FALSE),
+       yaxis = list(showgrid = FALSE, 
+                    zeroline = FALSE, 
+                    showticklabels = FALSE),
+       annotations = list(list(x = 0.22, 
+                               y = 0.95, 
+                               text = state_abbr, 
+                               showarrow = F,
+                               xref='paper', 
+                               yref='paper'),
+                          list(x = 0.81, 
+                               y = 0.95, 
+                               text = "Nation", 
+                               showarrow = F,
+                               xref='paper', 
+                               yref='paper')))
+```  
+
+**2013-2015 `r state_name` traffic fatalities by non-motor vehicle occupant deaths**
+```{r}
+palette <- colorFactor(c("black", '#00c800'), domain = c("No", "Yes"))
+
+leaflet(data = df2) %>% 
+addTiles() %>% 
+addCircleMarkers(~long, ~lat
+                ,label  = ~as.character(info)
+                ,color  = ~palette(peds)
+                ,radius = 6
+                ,stroke = FALSE
+                ,fillOpacity = 0.7 
+                )%>% 
+addLegend("bottomright", 
+          pal = palette,
+          values = ~peds,
+          title  = "Non-motor vehicle <br> occupants killed",
+          opacity = 1
+          )
+```
+
+
+###4. Weather conditions
+
+```{r}
+df2 <- data.frame(df_state$LATITUDE, 
+                  df_state$LONGITUD, 
+                  df_state$info, 
+                  df_state$WEATHER)
+colnames(df2) <- c("lat", "long", "info", "weather")
+df2$weather <- sapply(df2$weather, weather_decoding)
+
+df3 <- data.frame(df$WEATHER)
+colnames(df3) <- c("weather")
+df3$weather <- sapply(df3$weather, weather_decoding)
+
+
+p1<- plot_ly(data = count(df2, weather), 
+             type = 'pie',
+             textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             labels = ~weather, 
+             values = ~n,
+             name = "Weather",
+             domain = list(x = c(0, 0.47), 
+                           y = c(0, 0.94)),
+             marker = list(line = 
+                           list(color = '#FFFFFF', 
+                                width = 1))) 
+
+p2<- plot_ly(data = count(df3, weather), 
+             type = 'pie',
+             textposition = 'inside',
+             textinfo = 'label+percent',
+             insidetextfont = list(color = '#FFFFFF'),
+             labels = ~weather, 
+             values = ~n,
+             name = "Weather",
+             domain = list(x = c(0.53, 1), 
+                           y = c(0, 0.94)),
+             marker = list(line = 
+                           list(color = '#FFFFFF', 
+                                width = 1))) 
+
+title_string <- paste("weather conditions in 2013-2015 traffic fatalities:<br>", state_name, " vs Nation", sep="")
+
+subplot(p1, p2, nrows = 1) %>% 
+layout(title = title_string, 
+       showlegend = F,
+       margin = list(l = 50,r = 50,b = 10,t = 80,
+                     pad = 4),
+       xaxis = list(showgrid = FALSE, 
+                    zeroline = FALSE, 
+                    showticklabels = FALSE),
+       yaxis = list(showgrid = FALSE, 
+                    zeroline = FALSE, 
+                    showticklabels = FALSE),
+       annotations = list(list(x = 0.22, 
+                               y = 0.95, 
+                               text = state_abbr, 
+                               showarrow = F,
+                               xref='paper', 
+                               yref='paper'),
+                          list(x = 0.81, 
+                               y = 0.95, 
+                               text = "Nation", 
+                               showarrow = F,
+                               xref='paper', 
+                               yref='paper')))
+```  
+
+**2013-2015 `r state_name` traffic fatalities by weather conditions**
+```{r}
+#pal <- colorFactor(
+#  palette = "Spectral",
+#  domain  = df2$weather
+#)
+
+palette <- colorFactor(c("#994C00", 
+                         "#00FFFF",
+                         "yellow", 
+                         "orange",
+                         "#CC00CC",
+                         "#006633",
+                         "#E0E0E0",
+                         "#606060",
+                         '#00c800', 
+                         "#FF3333",
+                         '#00A8A8',
+                         '#0000FF', 
+                         "black"), 
+                       
+              domain = c("Blowing Sand, Soil, Dirt",
+                         "Blowing Snow",
+                         "Clear",
+                         "Cloudy",
+                         "Fog, Smog, Smoke",
+                         "Freezing Rain or Drizzle",
+                         "No Additional Atmospheric Conditions",
+                         "Other",
+                         "Rain",
+                         "Severe Crosswinds",
+                         "Sleet, Hail",
+                         "Snow",
+                         "Unknown"))
+
+
+
+leaflet(data = df2) %>% 
+addTiles() %>% 
+addCircleMarkers(~long, ~lat
+                ,label  = ~as.character(info)
+                ,color  = ~palette(weather)
+                ,radius = 6
+                ,stroke = FALSE
+                ,fillOpacity = 0.8 
+                )%>% 
+addLegend("bottomright", 
+          pal = palette,
+          values = ~weather,
+          title  = "Weather conditions",
+          opacity = 1
+          )
+```
+
+###5. Number of fatally injured persons in the crash
+
+```{r}
+df2 <- data.frame(df_state$LATITUDE, 
+                  df_state$LONGITUD, 
+                  df_state$info, 
+                  df_state$FATALS)
+colnames(df2) <- c("lat", "long", "info", "fatals")
+
+df3 <- data.frame(df$FATALS)
+colnames(df3) <- c("fatals")
+
+```
+**Year 2013-2015: number of fatally injured persons in the crash in `r state_name` (Number of deaths / counts)** 
+```{r}
+table(df2$fatals)
+```
+**Year 2013-2015: number of fatally injured persons in the crash nationally (Number of deaths / counts)**
+```{r}
+table(df3$fatals)
+```
+
+**2013-2015 `r state_name` traffic fatalities by number of deaths in one accident (the larger the bubble size the larger the number)**
+```{r}
+#p1 <- plot_ly(count(df2, fatals), 
+#             x = ~fatals, 
+#             y = ~n, 
+#             type = 'bar')
+
+leaflet(data = df2) %>% 
+addTiles() %>% 
+addCircleMarkers(~long, ~lat
+                ,label  = ~as.character(info)
+                ,color = 'black',
+                ,radius = ~as.numeric(fatals)*1.5+2
+                ,stroke = FALSE
+                ,fillOpacity = 0.7 
+                )
+```
+
+
+```{r}
+# remove outliers
+### DE   2 in wrong state
+
+```
