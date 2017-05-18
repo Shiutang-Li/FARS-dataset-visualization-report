@@ -25,3 +25,10 @@ library(plotly)    # for pie chart
 library(foreign)   # to load .dbf file  
 
 **Step 5. The user could generate the report for any US state (50 states + Washington D.C.) he/she likes.**
+```{r}
+# Choose a state to analyze (Use Capitalized caracters!)
+state_abbr <- "UT"
+
+# Virgin Islands contains 0 obs in year 2013-2015
+# Puerto Rico contains 0 obs in year 2013-2015
+```
