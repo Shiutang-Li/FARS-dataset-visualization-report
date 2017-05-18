@@ -6,16 +6,16 @@ Fatality Analysis Reporting System (FARS) data set is released by National Highw
 
 2. To create a customized report:
 
-**Step 1. download EDA_1.rmd and set_state.png and put them into the target file folder.** 
+**Step 1. download EDA_1.rmd and set_state.png and put them into the target file folder.**  
 
-**Step 2. download the 2013, 2014, 2015 data set from** 
+**Step 2. download the 2013, 2014, 2015 data set from**  
 ftp://ftp.nhtsa.dot.gov/fars/2013/National/FARS2013NationalDBF.zip  
 ftp://ftp.nhtsa.dot.gov/fars/2014/National/FARS2014NationalDBF.zip  
 ftp://ftp.nhtsa.dot.gov/fars/2015/National/FARS2015NationalCSV.zip
 
-**Step 3. Unzip them in the target file folder.** 
+**Step 3. Unzip them in the target file folder.**  
 
-**Step 4. Use RStudio (recommended) knit html to create report. Make sure the following R libraries are installed:** 
+**Step 4. Use RStudio (recommended) knit html to create report. Make sure the following R libraries are installed:**  
 
 library(png)       # show images on rmd  
 library(grid)      # show images on rmd  
