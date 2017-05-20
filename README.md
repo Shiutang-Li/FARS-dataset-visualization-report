@@ -17,7 +17,7 @@ Link: [EDA_1.html](https://github.com/Shiutang-Li/FARS-dataset-visualization-rep
 * library(plotly)    # pie chart   
 * library(foreign)   # load .dbf file   
 
-## How to create a customized report
+## Create a customized report
 
 **Step 1. download EDA_1.rmd and set_state.png and put them into the target file folder.**  
 
