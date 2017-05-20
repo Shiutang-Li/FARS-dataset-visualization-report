@@ -8,6 +8,15 @@ Fatality Analysis Reporting System (FARS) data set is released by National Highw
 
 To view the visulization report with interactive maps, download EDA_1.html. (It should be able to be viewed in google chrome)
 
+## Dependencies
+* R version 3.3.1
+* library(png)       # show images on mark down html file  
+* library(grid)      # show images on mark down html file   
+* library(dplyr)     # manipulate data frame  
+* library(leaflet)   # interactive maps    
+* library(plotly)    # pie chart   
+* library(foreign)   # load .dbf file   
+
 ## How to create a customized report
 
 **Step 1. download EDA_1.rmd and set_state.png and put them into the target file folder.**  
@@ -22,14 +31,7 @@ https://crashstats.nhtsa.dot.gov/Api/Public/Publication/812315
 
 **Step 3. Unzip them in the target file folder.**  
 
-**Step 4. Use RStudio (recommended) knit html on EDA_1.rmd to create report. Make sure the following R libraries are installed:**  
-
-library(png)       # show images on rmd  
-library(grid)      # show images on rmd  
-library(dplyr)  
-library(leaflet)   # for interactive maps  
-library(plotly)    # for pie chart  
-library(foreign)   # to load .dbf file  
+**Step 4. Use RStudio (recommended) knit html on EDA_1.rmd to create report. Make sure the required R libraries are installed:**  
 
 **Step 5. The user could generate the report for any US state (50 states + Washington D.C.) he/she likes, by changing the "state_abbr" variable in the .rmd file**
 ```{r}
