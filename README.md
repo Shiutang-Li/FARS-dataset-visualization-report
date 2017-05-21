@@ -31,7 +31,7 @@ https://crashstats.nhtsa.dot.gov/Api/Public/Publication/812315
 
 **Step 3. Unzip them in the target file folder.**  
 
-**Step 4. Use RStudio (recommended) knit html on EDA_1.rmd to create report. Make sure the required R libraries are installed:**  
+**Step 4. Use RStudio (recommended) knit html on EDA_1.rmd to create report. Make sure the required R libraries are installed.**  
 
 **Step 5. The user could generate the report for any US state (50 states + Washington D.C.) he/she likes, by changing the "state_abbr" variable in the .rmd file**
 ```{r}
