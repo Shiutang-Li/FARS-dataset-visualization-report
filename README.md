@@ -6,6 +6,9 @@ Fatality Analysis Reporting System (FARS) data set is released by National Highw
 
 ![](HI.jpg  =50x40) ![](NV.jpg =50x40)
 
+<img src="HI.jpg" alt="Drawing" style="width: 200px;"/>
+<img src="NV.jpg" alt="Drawing" style="width: 200px;"/>
+
 ## View report 
 
 Link: [EDA_1.html](https://github.com/Shiutang-Li/FARS-dataset-visualization-report/blob/master/EDA_1.html). (It should be able to be viewed in google chrome)
