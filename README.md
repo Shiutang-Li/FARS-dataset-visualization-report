@@ -4,6 +4,8 @@
 
 Fatality Analysis Reporting System (FARS) data set is released by National Highway Traffic Safety Administration (NHTSA), and in this report the 2013-2015 accident data file is analyzed. The accident data file records the details for each traffic accident in the US that cuases death.
 
+![t](NV.jpg)
+
 ## View report 
 
 Link: [EDA_1.html](https://github.com/Shiutang-Li/FARS-dataset-visualization-report/blob/master/EDA_1.html). (It should be able to be viewed in google chrome)
